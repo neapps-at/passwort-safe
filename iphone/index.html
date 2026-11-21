@@ -68,6 +68,12 @@ ul.list li > button.open { flex: 1; min-width: 0; text-align: left; background: 
 .detail .v { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
 .detail .v span { flex: 1; min-width: 0; word-break: break-word; white-space: pre-wrap; font-size: 17px; }
 .mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
+.saved { background: var(--chip); border-radius: 10px; padding: 10px 14px; margin-bottom: 4px; }
+.saved-name { font-weight: 600; word-break: break-all; }
+.saved-date { font-size: 13px; color: var(--muted); }
+.link { background: none; border: 0; color: var(--brand); font: inherit; font-size: 14px; padding: 8px 0; text-decoration: underline; }
+.stand { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted);
+  margin: -4px 0 8px; }
 #toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%);
   background: #323232; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: 90vw;
   opacity: 0; transition: opacity .2s; pointer-events: none; }
@@ -81,8 +87,12 @@ ul.list li > button.open { flex: 1; min-width: 0; text-align: left; background: 
   <header><h1 data-t="appName"></h1></header>
   <main>
     <div class="card">
-      <p data-t="intro" style="margin-top:0"></p>
-      <label class="btn outline" for="file" data-t="chooseFile"></label>
+      <p data-t="intro" style="margin-top:0" id="intro"></p>
+      <div id="savedBox" class="saved" hidden>
+        <div class="saved-name" id="savedName"></div>
+        <div class="saved-date" id="savedDate"></div>
+      </div>
+      <label class="btn outline" for="file" id="chooseLabel" data-t="chooseFile"></label>
       <input id="file" type="file" hidden>
       <div class="file-name" id="fileName"></div>
       <label class="field" for="pw" data-t="masterPassword"></label>
@@ -90,6 +100,7 @@ ul.list li > button.open { flex: 1; min-width: 0; text-align: left; background: 
       <button class="btn" id="openBtn" disabled data-t="open"></button>
       <div class="error" id="startError" hidden></div>
       <p class="hint" data-t="readOnlyHint"></p>
+      <button class="link" id="forgetBtn" hidden data-t="forget"></button>
     </div>
   </main>
 </section>
@@ -101,6 +112,7 @@ ul.list li > button.open { flex: 1; min-width: 0; text-align: left; background: 
     <button id="lockBtn" data-t="lock"></button>
   </header>
   <main>
+    <div class="stand"><span id="standText"></span><button class="link" id="refreshBtn" data-t="refresh"></button></div>
     <input id="search" type="search" autocomplete="off" autocapitalize="off" spellcheck="false">
     <div class="chips" id="folders"></div>
     <ul class="list" id="entries"></ul>
@@ -178,14 +190,18 @@ if (typeof document !== "undefined") (() => {
       chooseFile: "Datei wählen", masterPassword: "Master-Passwort", open: "Öffnen",
       opening: "Wird geöffnet …",
       readOnlyHint: "Nur zum Ansehen und Kopieren. Neue Einträge und Änderungen am PC (Windows-App) oder am Android-Handy. " +
-        "Alles bleibt auf diesem iPhone – nichts wird gesendet.",
+        "Die Datei wird verschlüsselt auf diesem iPhone gespeichert, damit beim nächsten Mal das Master-Passwort genügt. " +
+        "Nach Änderungen am PC: „Datei aktualisieren“. Nichts wird gesendet.",
       wrongPassword: "Falsches Master-Passwort.", invalidFile: "Diese Datei ist keine Passwort-Safe-Datei.",
       unreadable: "Die Datei konnte nicht gelesen werden.", noCrypto: "Dieser Browser unterstützt die Entschlüsselung nicht.",
       lock: "Sperren", back: "‹ Zurück", search: "Suchen", all: "Alle", noFolder: "Ohne Ordner",
       empty: "Keine Einträge.", noResults: "Keine Treffer.",
       name: "Name", email: "E-Mail", password: "Passwort", folder: "Ordner", note: "Bemerkung",
       copy: "Kopieren", show: "Anzeigen", hide: "Verbergen", copied: "Kopiert.", copyFailed: "Kopieren nicht möglich.",
-      locked: "Gesperrt – zum Öffnen Datei und Master-Passwort erneut eingeben.",
+      locked: "Gesperrt – zum Öffnen Master-Passwort erneut eingeben.",
+      introSaved: "Gib dein Master-Passwort ein.", savedOn: "Auf diesem iPhone gespeichert · Stand", stand: "Stand der Datei:",
+      otherFile: "Andere Datei wählen", refresh: "Datei aktualisieren",
+      forget: "Gespeicherte Datei von diesem iPhone entfernen", forgotten: "Gespeicherte Datei entfernt.",
     },
     ro: {
       appName: "Passwort-Safe",
@@ -193,14 +209,18 @@ if (typeof document !== "undefined") (() => {
       chooseFile: "Alege fișierul", masterPassword: "Parola principală", open: "Deschide",
       opening: "Se deschide …",
       readOnlyHint: "Doar pentru vizualizare și copiere. Intrări noi și modificări pe PC (aplicația Windows) sau pe telefonul Android. " +
-        "Totul rămâne pe acest iPhone – nu se trimite nimic.",
+        "Fișierul se păstrează criptat pe acest iPhone, ca data viitoare să ajungă parola principală. " +
+        "După modificări pe PC: „Actualizează fișierul”. Nu se trimite nimic.",
       wrongPassword: "Parolă principală greșită.", invalidFile: "Acest fișier nu este un fișier al seifului.",
       unreadable: "Fișierul nu a putut fi citit.", noCrypto: "Acest browser nu poate decripta fișierul.",
       lock: "Blochează", back: "‹ Înapoi", search: "Caută", all: "Toate", noFolder: "Fără dosar",
       empty: "Nicio intrare.", noResults: "Niciun rezultat.",
       name: "Name", email: "E-mail", password: "Parola", folder: "Dosar", note: "Bemerkung",
       copy: "Copiază", show: "Arată", hide: "Ascunde", copied: "Copiat.", copyFailed: "Copierea nu a fost posibilă.",
-      locked: "Blocat – pentru deschidere alegi din nou fișierul și parola principală.",
+      locked: "Blocat – pentru deschidere scrii din nou parola principală.",
+      introSaved: "Scrie parola principală.", savedOn: "Salvat pe acest iPhone · din", stand: "Fișierul din:",
+      otherFile: "Alege alt fișier", refresh: "Actualizează fișierul",
+      forget: "Șterge fișierul salvat de pe acest iPhone", forgotten: "Fișierul salvat a fost șters.",
     },
   };
   const lang = (navigator.language || "de").toLowerCase().startsWith("ro") ? "ro" : "de";
@@ -232,7 +252,61 @@ if (typeof document !== "undefined") (() => {
     return n;
   }
 
+  // ---------------- saved copy on this iPhone ----------------
+  // A web page may not keep access to a Drive file, so the ENCRYPTED file is kept in IndexedDB of this page.
+  // Without the master password it is as unreadable as the file in Drive. Saved only after a successful open.
+  const DB_NAME = "passwort-safe", STORE = "files", KEY = "last";
+  let saved = null; // { bytes: ArrayBuffer, name, modified }
+
+  function db() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function dbDo(mode, action) {
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const tx = d.transaction(STORE, mode);
+      const req = action(tx.objectStore(STORE));
+      tx.oncomplete = () => { d.close(); resolve(req && req.result); };
+      tx.onerror = () => { d.close(); reject(tx.error); };
+    });
+  }
+  const loadSaved = () => dbDo("readonly", s => s.get(KEY)).catch(() => null);
+  const storeSaved = value => dbDo("readwrite", s => s.put(value, KEY)).catch(() => {});
+  const deleteSaved = () => dbDo("readwrite", s => s.delete(KEY)).catch(() => {});
+
+  function formatDate(ms) {
+    try {
+      return new Date(ms).toLocaleString(lang === "ro" ? "ro-RO" : "de-AT",
+        { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch (e) { return ""; }
+  }
+
+  /** Start screen: with a saved file only the master password is asked for. */
+  function showStart() {
+    const hasSaved = !!saved;
+    fileBytes = hasSaved ? new Uint8Array(saved.bytes) : null;
+    fileLabel = hasSaved ? saved.name : "";
+    fileModified = hasSaved ? saved.modified : 0;
+    $("savedBox").hidden = !hasSaved;
+    $("forgetBtn").hidden = !hasSaved;
+    if (hasSaved) {
+      $("savedName").textContent = saved.name;
+      $("savedDate").textContent = `${T.savedOn} ${formatDate(saved.modified)}`;
+    }
+    $("intro").textContent = hasSaved ? T.introSaved : T.intro;
+    $("chooseLabel").textContent = hasSaved ? T.otherFile : T.chooseFile;
+    $("fileName").textContent = "";
+    updateOpenButton();
+    show("start");
+  }
+
   // ---------------- start screen ----------------
+  let fileModified = 0, fileIsNew = false;
   function updateOpenButton() { $("openBtn").disabled = !fileBytes || !$("pw").value; }
   $("file").addEventListener("change", async () => {
     const f = $("file").files[0];
@@ -241,13 +315,22 @@ if (typeof document !== "undefined") (() => {
     try {
       fileBytes = new Uint8Array(await f.arrayBuffer());
       fileLabel = f.name;
+      fileModified = f.lastModified || Date.now();
+      fileIsNew = true;
       $("fileName").textContent = f.name;
+      $("savedBox").hidden = true;
     } catch (e) {
       fileBytes = null; showStartError(T.unreadable);
     }
     $("file").value = "";
     updateOpenButton();
     $("pw").focus();
+  });
+  $("forgetBtn").addEventListener("click", async () => {
+    await deleteSaved();
+    saved = null;
+    showStart();
+    toast(T.forgotten);
   });
   $("pw").addEventListener("input", updateOpenButton);
   $("pw").addEventListener("keydown", e => { if (e.key === "Enter" && !$("openBtn").disabled) openSafe(); });
@@ -262,8 +345,15 @@ if (typeof document !== "undefined") (() => {
     try {
       entries = await PasswortSafeCore.decrypt(fileBytes, $("pw").value);
       $("pw").value = "";
+      if (fileIsNew) {
+        // Only a file that really opened is kept (a wrong or foreign file never replaces the saved one).
+        saved = { bytes: fileBytes.slice().buffer, name: fileLabel, modified: fileModified };
+        await storeSaved(saved);
+        fileIsNew = false;
+      }
       folder = null; query = ""; $("search").value = "";
       $("vaultFile").textContent = fileLabel;
+      $("standText").textContent = `${T.stand} ${formatDate(fileModified)}`;
       lastActivity = Date.now();
       renderList(); show("vault");
     } catch (e) {
@@ -362,13 +452,21 @@ if (typeof document !== "undefined") (() => {
 
   // ---------------- locking ----------------
   function lock(message) {
-    entries = []; fileBytes = null; fileLabel = ""; openId = null; folder = null; query = "";
+    // Decrypted entries are dropped; the saved (still encrypted) file stays for the next opening.
+    entries = []; openId = null; folder = null; query = ""; fileIsNew = false;
     $("entries").replaceChildren(); $("detailBody").replaceChildren(); $("folders").replaceChildren();
-    $("fileName").textContent = ""; $("pw").value = ""; $("search").value = "";
-    updateOpenButton(); show("start");
+    $("pw").value = ""; $("search").value = ""; $("startError").hidden = true;
+    showStart();
     if (message) toast(message);
   }
   $("lockBtn").addEventListener("click", () => lock());
+  // "Datei aktualisieren": lock and pick the newer file from Drive right away (the tap allows opening the picker).
+  $("refreshBtn").addEventListener("click", () => { lock(); $("file").click(); });
+
+  loadSaved().then(value => {
+    if (value && value.bytes) saved = value;
+    if (!$("start").hidden) showStart();
+  });
   ["pointerdown", "keydown", "scroll"].forEach(ev => document.addEventListener(ev, () => { lastActivity = Date.now(); }, { passive: true }));
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) { hiddenSince = Date.now(); return; }
